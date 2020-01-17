@@ -10,6 +10,7 @@ import 'package:intl/intl.dart';
 import 'package:speech_to_text/speech_recognition_error.dart';
 import 'package:speech_to_text/speech_recognition_result.dart';
 import 'package:speech_to_text/speech_to_text.dart';
+import 'package:flutter_tts/flutter_tts.dart';
 
 enum _Element {
   background,
@@ -44,6 +45,9 @@ class DigitalClock extends StatefulWidget {
 class _DigitalClockState extends State<DigitalClock> {
   DateTime _dateTime = DateTime.now();
   Timer _timer;
+  Map<_Element, Color> _colors = _lightTheme;
+
+  // STT
   final SpeechToText speech = SpeechToText();
   bool _hasSpeech = false;
   bool _stressTest = false;
@@ -54,7 +58,9 @@ class _DigitalClockState extends State<DigitalClock> {
   String lastStatus = "";
   String _currentLocaleId = "";
   List<LocaleName> _localeNames = [];
-  Map<_Element, Color> _colors = _lightTheme;
+
+  // TTS
+  FlutterTts flutterTts = FlutterTts();
 
   @override
   void initState() {
@@ -234,28 +240,38 @@ class _DigitalClockState extends State<DigitalClock> {
 
   void resultListener(SpeechRecognitionResult result) {
     if (result.finalResult) {
+      String tts = "Setting to";
       if (result.recognizedWords.contains("light")) {
+        tts += " light theme,";
         setState(() {
           _colors = _lightTheme;
         });
       }
 
       if (result.recognizedWords.contains("dark")) {
+        tts += " dark theme,";
         setState(() {
           _colors = _darkTheme;
         });
       }
 
       if (result.recognizedWords.contains("12") || result.recognizedWords.contains("twelve")) {
+        tts += " twelve hour format,";
         setState(() {
           widget.model.is24HourFormat = false;
         });
       }
 
       if (result.recognizedWords.contains("24") || result.recognizedWords.contains("twenty-four")) {
+        tts += " twenty four hour format";
         setState(() {
           widget.model.is24HourFormat = true;
         });
+      }
+
+      if (tts != "Setting to") {
+        flutterTts.setSpeechRate(0.4);
+        flutterTts.speak(tts);
       }
     }
 
