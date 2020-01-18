@@ -1,4 +1,7 @@
-include ':app'
+include ':app', ':porcupinemanager', 'porcupine'
+project(':porcupine').projectDir = new File(settingsDir, '../../porcupine/android/Porcupine/app')
+project(':porcupinemanager').projectDir = new File(settingsDir, '../../porcupine/android/PorcupineManager/app')
+
 
 def flutterProjectRoot = rootProject.projectDir.parentFile.toPath()
 
@@ -13,3 +16,4 @@ plugins.each { name, path ->
     include ":$name"
     project(":$name").projectDir = pluginDirectory
 }
+

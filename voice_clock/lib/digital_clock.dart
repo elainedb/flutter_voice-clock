@@ -4,6 +4,7 @@
 
 import 'dart:async';
 
+import 'package:flutter/services.dart';
 import 'package:flutter_clock_helper/model.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
@@ -65,9 +66,14 @@ class _DigitalClockState extends State<DigitalClock> {
   @override
   void initState() {
     super.initState();
+
+    _setupHotwordMethodChannel();
+
     widget.model.addListener(_updateModel);
     _updateTime();
     _updateModel();
+
+    initSpeechState();
   }
 
   Future<void> initSpeechState() async {
@@ -113,24 +119,15 @@ class _DigitalClockState extends State<DigitalClock> {
   void _updateTime() {
     setState(() {
       _dateTime = DateTime.now();
-      // Update once per minute. If you want to update every second, use the
-      // following code.
       _timer = Timer(
         Duration(minutes: 1) - Duration(seconds: _dateTime.second) - Duration(milliseconds: _dateTime.millisecond),
         _updateTime,
       );
-      // Update once per second, but make sure to do it at the beginning of each
-      // new second, so that the clock is accurate.
-      // _timer = Timer(
-      //   Duration(seconds: 1) - Duration(milliseconds: _dateTime.millisecond),
-      //   _updateTime,
-      // );
     });
   }
 
   @override
   Widget build(BuildContext context) {
-//    _colors = Theme.of(context).brightness == Brightness.light ? _lightTheme : _darkTheme;
     final hour = DateFormat(widget.model.is24HourFormat ? 'HH' : 'hh').format(_dateTime);
     final minute = DateFormat('mm').format(_dateTime);
     final fontSize = MediaQuery.of(context).size.width / 3.5;
@@ -173,15 +170,11 @@ class _DigitalClockState extends State<DigitalClock> {
   }
 
   speechToText() async {
-    print("ya");
-    if (!_hasSpeech) {
-      initSpeechState();
+    print("speechToText");
+    if (speech.isListening) {
+      stopListening();
     } else {
-      if (speech.isListening) {
-        stopListening();
-      } else {
-        startListening();
-      }
+      startListening();
     }
   }
 
@@ -238,7 +231,7 @@ class _DigitalClockState extends State<DigitalClock> {
     });
   }
 
-  void resultListener(SpeechRecognitionResult result) {
+  void resultListener(SpeechRecognitionResult result) async {
     if (result.finalResult) {
       String tts = "Setting to";
       if (result.recognizedWords.contains("light")) {
@@ -273,6 +266,8 @@ class _DigitalClockState extends State<DigitalClock> {
         flutterTts.setSpeechRate(0.4);
         flutterTts.speak(tts);
       }
+
+      await MethodChannel('dev.elainedb.voice_clock/stt').invokeMethod('final', '');
     }
 
     setState(() {
@@ -296,6 +291,17 @@ class _DigitalClockState extends State<DigitalClock> {
     changeStatusForStress(status);
     setState(() {
       lastStatus = "$status";
+    });
+  }
+
+  void _setupHotwordMethodChannel() {
+    print("_setupHotwordMethodChannel");
+    const MethodChannel _kChannel = MethodChannel('dev.elainedb.voice_clock/hotword');
+    _kChannel.setMethodCallHandler((MethodCall call) async {
+      print(call.method + " " + call.arguments);
+      if (call.method == "hotword") {
+        speechToText();
+      }
     });
   }
 }
