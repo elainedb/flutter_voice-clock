@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<actions>
+    <action intentName="actions.intent.OPEN_APP_FEATURE">
+        <fulfillment urlTemplate="https://dynamiclinkssandbox.page.link/{?feature}">
+            <parameter-mapping
+                intentParameter="feature"
+                urlParameter="feature"/>
+        </fulfillment>
+        <parameter name="feature">
+            <entity-set-reference entitySetId="FeatureEntitySet"/>
+        </parameter>
+    </action>
+
+    <entity-set entitySetId="FeatureEntitySet">
+        <entity
+            name="Dark"
+            identifier="DARK"/>
+    </entity-set>
+</actions>

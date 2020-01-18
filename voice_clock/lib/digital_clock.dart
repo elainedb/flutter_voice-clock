@@ -68,6 +68,7 @@ class _DigitalClockState extends State<DigitalClock> {
     super.initState();
 
     _setupHotwordMethodChannel();
+    _setupConfigMethodChannel();
 
     widget.model.addListener(_updateModel);
     _updateTime();
@@ -295,12 +296,23 @@ class _DigitalClockState extends State<DigitalClock> {
   }
 
   void _setupHotwordMethodChannel() {
-    print("_setupHotwordMethodChannel");
-    const MethodChannel _kChannel = MethodChannel('dev.elainedb.voice_clock/hotword');
-    _kChannel.setMethodCallHandler((MethodCall call) async {
+    MethodChannel('dev.elainedb.voice_clock/hotword').setMethodCallHandler((MethodCall call) async {
       print(call.method + " " + call.arguments);
       if (call.method == "hotword") {
         speechToText();
+      }
+    });
+  }
+
+  void _setupConfigMethodChannel() {
+    MethodChannel('dev.elainedb.voice_clock/config').setMethodCallHandler((MethodCall call) async {
+      print(call.method + " " + call.arguments);
+      if (call.method == "dark") {
+        setState(() {
+          _colors = _darkTheme;
+        });
+        flutterTts.setSpeechRate(0.4);
+        flutterTts.speak('Setting to dark theme from app actions.');
       }
     });
   }
