@@ -235,28 +235,29 @@ class _DigitalClockState extends State<DigitalClock> {
   void resultListener(SpeechRecognitionResult result) async {
     if (result.finalResult) {
       String tts = "Setting to";
-      if (result.recognizedWords.contains("light")) {
+      String words = result.recognizedWords.toLowerCase();
+      if (words.contains("light")) {
         tts += " light theme,";
         setState(() {
           _colors = _lightTheme;
         });
       }
 
-      if (result.recognizedWords.contains("dark")) {
+      if (words.contains("dark")) {
         tts += " dark theme,";
         setState(() {
           _colors = _darkTheme;
         });
       }
 
-      if (result.recognizedWords.contains("12") || result.recognizedWords.contains("twelve")) {
+      if (words.contains("12") || words.contains("twelve")) {
         tts += " twelve hour format,";
         setState(() {
           widget.model.is24HourFormat = false;
         });
       }
 
-      if (result.recognizedWords.contains("24") || result.recognizedWords.contains("twenty-four")) {
+      if (words.contains("24") || words.contains("twenty-four")) {
         tts += " twenty four hour format";
         setState(() {
           widget.model.is24HourFormat = true;
