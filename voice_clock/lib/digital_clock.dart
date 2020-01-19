@@ -1,7 +1,3 @@
-// Copyright 2019 The Chromium Authors. All rights reserved.
-// Use of this source code is governed by a BSD-style license that can be
-// found in the LICENSE file.
-
 import 'dart:async';
 import 'dart:io';
 
@@ -12,7 +8,6 @@ import 'package:intl/intl.dart';
 import 'package:speech_to_text/speech_recognition_error.dart';
 import 'package:speech_to_text/speech_recognition_result.dart';
 import 'package:speech_to_text/speech_to_text.dart';
-import 'package:flutter_tts/flutter_tts.dart';
 
 enum _Element {
   background,
@@ -32,11 +27,6 @@ final _darkTheme = {
   _Element.shadow: Color(0xFF174EA6),
 };
 
-enum TtsState { playing, stopped }
-
-/// A basic digital clock.
-///
-/// You can do better than this!
 class DigitalClock extends StatefulWidget {
   const DigitalClock(this.model);
 
@@ -63,11 +53,8 @@ class _DigitalClockState extends State<DigitalClock> {
   String _currentLocaleId = "";
   List<LocaleName> _localeNames = [];
 
-  // TTS
-  FlutterTts flutterTts;
-  TtsState ttsState = TtsState.stopped;
-  get isPlaying => ttsState == TtsState.playing;
-  get isStopped => ttsState == TtsState.stopped;
+  static String hotwordText = "Say 'Hey Pico'";
+  String stateText = hotwordText;
 
   @override
   void initState() {
@@ -81,7 +68,6 @@ class _DigitalClockState extends State<DigitalClock> {
     _updateModel();
 
     initSpeechState();
-    initTts();
   }
 
   Future<void> initSpeechState() async {
@@ -101,33 +87,6 @@ class _DigitalClockState extends State<DigitalClock> {
     });
   }
 
-  initTts() {
-    flutterTts = FlutterTts();
-
-    flutterTts.setStartHandler(() {
-      setState(() {
-        print("playing");
-        ttsState = TtsState.playing;
-      });
-    });
-
-    flutterTts.setCompletionHandler(() async {
-      setState(() {
-        print("Complete");
-        ttsState = TtsState.stopped;
-      });
-
-      await MethodChannel('dev.elainedb.voice_clock/stt').invokeMethod('final', '');
-    });
-
-    flutterTts.setErrorHandler((msg) {
-      setState(() {
-        print("error: $msg");
-        ttsState = TtsState.stopped;
-      });
-    });
-  }
-
   @override
   void didUpdateWidget(DigitalClock oldWidget) {
     super.didUpdateWidget(oldWidget);
@@ -143,7 +102,6 @@ class _DigitalClockState extends State<DigitalClock> {
     widget.model.removeListener(_updateModel);
     widget.model.dispose();
     super.dispose();
-    flutterTts.stop();
   }
 
   void _updateModel() {
@@ -181,6 +139,19 @@ class _DigitalClockState extends State<DigitalClock> {
       ],
     );
 
+    final helperTextStyle = TextStyle(
+      color: _colors[_Element.text],
+      fontFamily: 'PressStart2P',
+      fontSize: fontSize / 10,
+      shadows: [
+        Shadow(
+          blurRadius: 0,
+          color: _colors[_Element.shadow],
+          offset: Offset(2, 0),
+        ),
+      ],
+    );
+
     return Container(
       color: _colors[_Element.background],
       child: Center(
@@ -191,36 +162,15 @@ class _DigitalClockState extends State<DigitalClock> {
               Positioned(left: offset, top: 0, child: Text(hour)),
               Positioned(right: offset, bottom: offset, child: Text(minute)),
               Positioned(
-                left: 0,
-                bottom: 0,
-                child: Row(
-                  children: <Widget>[
-                    IconButton(
-                      icon: Icon(Icons.mic),
-                      onPressed: () => speechToText(),
-                    ),
-                    if (Platform.isIOS)
-                      IconButton(
-                        icon: Icon(Icons.add_circle),
-                        onPressed: () async => await MethodChannel('dev.elainedb.voice_clock/addShortcut').invokeMethod('dark', ''),
-                      ),
-                  ],
-                ),
+                left: 8,
+                bottom: 8,
+                child: Text(stateText, style: helperTextStyle,),
               ),
             ],
           ),
         ),
       ),
     );
-  }
-
-  speechToText() async {
-    print("speechToText");
-    if (speech.isListening) {
-      stopListening();
-    } else {
-      startListening();
-    }
   }
 
   void stressTest() {
@@ -259,64 +209,79 @@ class _DigitalClockState extends State<DigitalClock> {
         listenFor: Duration(seconds: 10),
         localeId: _currentLocaleId,
         onSoundLevelChange: soundLevelListener );
-    setState(() {});
+    setState(() {
+      var platformText = "";
+      if (Platform.isIOS) {
+        platformText = "\n'shortcut'\nfollowed by 'over'";
+      }
+      stateText = "Waiting for command\nTry saying\n'dark'\n'light'\n'12' '24'$platformText";
+    });
   }
 
-  void stopListening() {
+  Future<void> stopListening() async {
     speech.stop();
     setState(() {
       level = 0.0;
     });
+
+    await MethodChannel('dev.elainedb.voice_clock/stt').invokeMethod('final', '');
   }
 
-  void cancelListening() {
-    speech.cancel();
-    setState(() {
-      level = 0.0;
-    });
-  }
-
-  void resultListener(SpeechRecognitionResult result) async {
+  Future<void> resultListener(SpeechRecognitionResult result) async {
     if (result.finalResult) {
-      String tts = "Setting to";
+      String tts = "Setting to\n";
       String words = result.recognizedWords.toLowerCase();
+
+      Map<_Element, Color> newColors = _colors;
+      bool is24Format = widget.model.is24HourFormat;
+
       if (words.contains("light")) {
-        tts += " light theme,";
-        setState(() {
-          _colors = _lightTheme;
-        });
+        tts += " light theme\n";
+        newColors = _lightTheme;
       }
 
       if (words.contains("dark")) {
-        tts += " dark theme,";
-        setState(() {
-          _colors = _darkTheme;
-        });
-
-        if (Platform.isIOS) {
-          await MethodChannel('dev.elainedb.voice_clock/configSet').invokeMethod('dark', '');
-        }
+        tts += " dark theme\n";
+        newColors = _darkTheme;
       }
 
       if (words.contains("12") || words.contains("twelve")) {
-        tts += " twelve hour format,";
-        setState(() {
-          widget.model.is24HourFormat = false;
-        });
+        tts += " twelve hour format\n";
+        is24Format = false;
       }
 
       if (words.contains("24") || words.contains("twenty-four")) {
         tts += " twenty four hour format";
-        setState(() {
-          widget.model.is24HourFormat = true;
-        });
+        is24Format = true;
       }
 
-      if (tts != "Setting to") {
-        _speak(tts);
+      if (tts != "Setting to\n") {
+        _displayCommand(tts);
       }
+
+      setState(() {
+        if (newColors != _colors) _colors = newColors;
+        if (is24Format != widget.model.is24HourFormat) widget.model.is24HourFormat = is24Format;
+      });
+
+      if (Platform.isIOS) {
+        if (words.contains("dark")) {
+          // register user activity for Siri
+          await MethodChannel('dev.elainedb.voice_clock/configSet').invokeMethod('dark', '');
+        }
+
+        if (words.contains("shortcut")) {
+          setState(() {
+            stateText = hotwordText;
+          });
+
+          // show shortcut config
+          await MethodChannel('dev.elainedb.voice_clock/addShortcut').invokeMethod('dark', '');
+        }
+      }
+
     } else {
-      // force final if "over" is said
+      // force final if "over" is said -> result.finalResult will be true
       if (result.recognizedWords.toLowerCase().contains("over")) {
         stopListening();
       }
@@ -346,25 +311,28 @@ class _DigitalClockState extends State<DigitalClock> {
     });
   }
 
-  Future _speak(String voiceText) async {
-    await flutterTts.setVolume(1.0);
-    await flutterTts.setSpeechRate(0.4);
-    await flutterTts.setPitch(1.0);
+  void _displayCommand(String voiceText) {
+    setState(() {
+      stateText = voiceText;
+    });
 
-    var result = await flutterTts.speak(voiceText);
-    if (result == 1) setState(() => ttsState = TtsState.playing);
-  }
+    Timer(Duration(seconds: 3), () {
+      setState(() {
+        stateText = hotwordText;
+      });
+    });
 
-  Future _stop() async {
-    var result = await flutterTts.stop();
-    if (result == 1) setState(() => ttsState = TtsState.stopped);
   }
 
   void _setupHotwordMethodChannel() {
     MethodChannel('dev.elainedb.voice_clock/hotword').setMethodCallHandler((MethodCall call) async {
       print(call.method + " " + call.arguments);
       if (call.method == "hotword") {
-        speechToText();
+        if (speech.isListening) {
+          stopListening();
+        } else {
+          startListening();
+        }
       }
     });
   }
@@ -373,10 +341,18 @@ class _DigitalClockState extends State<DigitalClock> {
     MethodChannel('dev.elainedb.voice_clock/config').setMethodCallHandler((MethodCall call) async {
       print(call.method + " " + call.arguments);
       if (call.method == "dark") {
+        var platformText = "unknown";
+        if (Platform.isIOS) {
+          platformText = "siri shortcuts";
+        } else if (Platform.isAndroid) {
+          platformText = "app actions";
+        }
+
+        _displayCommand('Setting to dark theme\nfrom $platformText.');
+
         setState(() {
           _colors = _darkTheme;
         });
-        _speak('Setting to dark theme from app actions.');
       }
     });
   }

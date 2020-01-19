@@ -1,26 +1,20 @@
 PODS:
   - Flutter (1.0.0)
-  - flutter_tts (0.0.1):
-    - Flutter
   - speech_to_text (0.0.1):
     - Flutter
 
 DEPENDENCIES:
   - Flutter (from `Flutter`)
-  - flutter_tts (from `.symlinks/plugins/flutter_tts/ios`)
   - speech_to_text (from `.symlinks/plugins/speech_to_text/ios`)
 
 EXTERNAL SOURCES:
   Flutter:
     :path: Flutter
-  flutter_tts:
-    :path: ".symlinks/plugins/flutter_tts/ios"
   speech_to_text:
     :path: ".symlinks/plugins/speech_to_text/ios"
 
 SPEC CHECKSUMS:
   Flutter: 0e3d915762c693b495b44d77113d4970485de6ec
-  flutter_tts: e382b9044202139b911422a8f3e7d856c368a7c5
   speech_to_text: 9c45635ae1a7401048f99d948b967e463c8b2b84
 
 PODFILE CHECKSUM: 0ba44ad07df4ab62269dc769727cf0f12b1e453d
