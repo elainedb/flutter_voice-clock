@@ -72,7 +72,9 @@ class _DigitalClockState extends State<DigitalClock> {
 
   Future<void> initSpeechState() async {
     bool hasSpeech = await speech.initialize(
-        onError: errorListener, onStatus: statusListener);
+      onError: errorListener,
+      onStatus: statusListener,
+    );
     if (hasSpeech) {
       _localeNames = await speech.locales();
 
@@ -164,7 +166,10 @@ class _DigitalClockState extends State<DigitalClock> {
               Positioned(
                 left: 8,
                 bottom: 8,
-                child: Text(stateText, style: helperTextStyle,),
+                child: Text(
+                  stateText,
+                  style: helperTextStyle,
+                ),
               ),
             ],
           ),
@@ -205,10 +210,11 @@ class _DigitalClockState extends State<DigitalClock> {
     lastWords = "";
     lastError = "";
     speech.listen(
-        onResult: resultListener,
-        listenFor: Duration(seconds: 10),
-        localeId: _currentLocaleId,
-        onSoundLevelChange: soundLevelListener );
+      onResult: resultListener,
+      listenFor: Duration(seconds: 10),
+      localeId: _currentLocaleId,
+      onSoundLevelChange: soundLevelListener,
+    );
     setState(() {
       var platformText = "";
       if (Platform.isIOS) {
@@ -279,7 +285,6 @@ class _DigitalClockState extends State<DigitalClock> {
       }
 
       await MethodChannel('dev.elainedb.voice_clock/stt').invokeMethod('final', '');
-
     } else {
       // force final if "over" is said -> result.finalResult will be true
       if (result.recognizedWords.toLowerCase().contains("over")) {
@@ -322,7 +327,6 @@ class _DigitalClockState extends State<DigitalClock> {
         stateText = hotwordText;
       });
     });
-
   }
 
   void _setupHotwordMethodChannel() {
