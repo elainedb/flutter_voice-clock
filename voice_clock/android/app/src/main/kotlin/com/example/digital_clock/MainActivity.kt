@@ -43,6 +43,7 @@ class MainActivity: FlutterActivity() {
         configChannel = MethodChannel(flutterView, CONFIG_CHANNEL)
         MethodChannel(flutterView, STT_CHANNEL).setMethodCallHandler { call, result ->
             if (call.method == "final") {
+                Log.d("sttChannel", "final")
                 process()
             }
         }

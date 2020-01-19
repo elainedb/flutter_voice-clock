@@ -11,8 +11,8 @@
 
     <application
         android:name="io.flutter.app.FlutterApplication"
-        android:label="digital_clock"
-        android:icon="@mipmap/ic_launcher"
+        android:label="Voice Clock"
+        android:icon="@drawable/ic_launcher"
         tools:ignore="GoogleAppIndexingWarning">
         <activity
             android:name=".MainActivity"

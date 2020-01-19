@@ -223,8 +223,6 @@ class _DigitalClockState extends State<DigitalClock> {
     setState(() {
       level = 0.0;
     });
-
-    await MethodChannel('dev.elainedb.voice_clock/stt').invokeMethod('final', '');
   }
 
   Future<void> resultListener(SpeechRecognitionResult result) async {
@@ -280,10 +278,13 @@ class _DigitalClockState extends State<DigitalClock> {
         }
       }
 
+      await MethodChannel('dev.elainedb.voice_clock/stt').invokeMethod('final', '');
+
     } else {
       // force final if "over" is said -> result.finalResult will be true
       if (result.recognizedWords.toLowerCase().contains("over")) {
         stopListening();
+        await MethodChannel('dev.elainedb.voice_clock/stt').invokeMethod('final', '');
       }
     }
 
