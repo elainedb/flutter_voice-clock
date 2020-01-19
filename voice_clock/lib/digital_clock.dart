@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 import 'dart:async';
+import 'dart:io';
 
 import 'package:flutter/services.dart';
 import 'package:flutter_clock_helper/model.dart';
@@ -192,11 +193,20 @@ class _DigitalClockState extends State<DigitalClock> {
               Positioned(
                 left: 0,
                 bottom: 0,
-                child: IconButton(
-                  icon: Icon(Icons.mic),
-                  onPressed: () => speechToText(),
+                child: Row(
+                  children: <Widget>[
+                    IconButton(
+                      icon: Icon(Icons.mic),
+                      onPressed: () => speechToText(),
+                    ),
+                    if (Platform.isIOS)
+                      IconButton(
+                        icon: Icon(Icons.add_circle),
+                        onPressed: () async => await MethodChannel('dev.elainedb.voice_clock/addShortcut').invokeMethod('dark', ''),
+                      ),
+                  ],
                 ),
-              )
+              ),
             ],
           ),
         ),
@@ -282,6 +292,10 @@ class _DigitalClockState extends State<DigitalClock> {
         setState(() {
           _colors = _darkTheme;
         });
+
+        if (Platform.isIOS) {
+          await MethodChannel('dev.elainedb.voice_clock/configSet').invokeMethod('dark', '');
+        }
       }
 
       if (words.contains("12") || words.contains("twelve")) {

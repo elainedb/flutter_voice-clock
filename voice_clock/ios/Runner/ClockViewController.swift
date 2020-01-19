@@ -7,6 +7,12 @@
 //
 
 import UIKit
+import Intents
+import IntentsUI
+import CoreSpotlight
+import MobileCoreServices
+
+public let kConfigDarkActivityType = "dev.elainedb.dark"
 
 class ClockViewController: FlutterViewController {
     var porcupineManager: PorcupineManager!
@@ -14,16 +20,34 @@ class ClockViewController: FlutterViewController {
     var hotwordChannel: FlutterMethodChannel!
     var sttChannel: FlutterMethodChannel!
     var configChannel: FlutterMethodChannel!
+    var configSetChannel: FlutterMethodChannel!
+    var addShortcutChannel: FlutterMethodChannel!
     
     override func viewDidLoad() {
         hotwordChannel = FlutterMethodChannel(name: "dev.elainedb.voice_clock/hotword", binaryMessenger: self.binaryMessenger)
         sttChannel = FlutterMethodChannel(name: "dev.elainedb.voice_clock/stt", binaryMessenger: self.binaryMessenger)
         configChannel = FlutterMethodChannel(name: "dev.elainedb.voice_clock/config", binaryMessenger: self.binaryMessenger)
+        configSetChannel = FlutterMethodChannel(name: "dev.elainedb.voice_clock/configSet", binaryMessenger: self.binaryMessenger)
+        addShortcutChannel = FlutterMethodChannel(name: "dev.elainedb.voice_clock/addShortcut", binaryMessenger: self.binaryMessenger)
         
         sttChannel.setMethodCallHandler({
           (call: FlutterMethodCall, result: @escaping FlutterResult) -> Void in
             if (call.method == "final") {
                 self.process()
+            }
+        })
+        
+        configSetChannel.setMethodCallHandler({
+          (call: FlutterMethodCall, result: @escaping FlutterResult) -> Void in
+            if (call.method == "dark") {
+                self.darkWasSet()
+            }
+        })
+        
+        addShortcutChannel.setMethodCallHandler({
+          (call: FlutterMethodCall, result: @escaping FlutterResult) -> Void in
+            if (call.method == "dark") {
+                self.addDarkShortcut()
             }
         })
         
@@ -55,4 +79,52 @@ class ClockViewController: FlutterViewController {
             return
         }
     }
+    
+    func darkShortcut(thumbnail: UIImage?) -> NSUserActivity {
+        let activity = NSUserActivity(activityType: kConfigDarkActivityType)
+        activity.persistentIdentifier = NSUserActivityPersistentIdentifier(kConfigDarkActivityType)
+        activity.isEligibleForSearch = true
+        activity.isEligibleForPrediction = true
+        
+        let attributes = CSSearchableItemAttributeSet(itemContentType: kUTTypeItem as String)
+        activity.title = "Set theme to dark"
+        attributes.contentDescription = "Set theme to dark"
+        attributes.thumbnailData = thumbnail?.jpegData(compressionQuality: 1.0)
+        activity.suggestedInvocationPhrase = "Set theme to dark"
+
+        activity.contentAttributeSet = attributes
+        
+        return activity
+    }
+    
+    func darkWasSet() {
+      // Create and donate an activity-based Shortcut
+      let activity = darkShortcut(thumbnail: UIImage(named: "square"))
+      self.userActivity = activity
+      activity.becomeCurrent()
+    }
+    
+    func addDarkShortcut() {
+        // Open View Controller to Create New Shortcut
+        let activity = darkShortcut(thumbnail: UIImage(named: "square"))
+        let shortcut = INShortcut(userActivity: activity)
+        
+        let vc = INUIAddVoiceShortcutViewController(shortcut: shortcut)
+        vc.delegate = self
+        
+        present(vc, animated: true, completion: nil)
+      }
+
+}
+
+extension ClockViewController: INUIAddVoiceShortcutViewControllerDelegate {
+  func addVoiceShortcutViewController(_ controller: INUIAddVoiceShortcutViewController,
+                                      didFinishWith voiceShortcut: INVoiceShortcut?,
+                                      error: Error?) {
+    dismiss(animated: true, completion: nil)
+  }
+  
+  func addVoiceShortcutViewControllerDidCancel(_ controller: INUIAddVoiceShortcutViewController) {
+    dismiss(animated: true, completion: nil)
+  }
 }
