@@ -31,6 +31,8 @@ final _darkTheme = {
   _Element.shadow: Color(0xFF174EA6),
 };
 
+enum TtsState { playing, stopped }
+
 /// A basic digital clock.
 ///
 /// You can do better than this!
@@ -61,7 +63,10 @@ class _DigitalClockState extends State<DigitalClock> {
   List<LocaleName> _localeNames = [];
 
   // TTS
-  FlutterTts flutterTts = FlutterTts();
+  FlutterTts flutterTts;
+  TtsState ttsState = TtsState.stopped;
+  get isPlaying => ttsState == TtsState.playing;
+  get isStopped => ttsState == TtsState.stopped;
 
   @override
   void initState() {
@@ -75,6 +80,7 @@ class _DigitalClockState extends State<DigitalClock> {
     _updateModel();
 
     initSpeechState();
+    initTts();
   }
 
   Future<void> initSpeechState() async {
@@ -94,6 +100,33 @@ class _DigitalClockState extends State<DigitalClock> {
     });
   }
 
+  initTts() {
+    flutterTts = FlutterTts();
+
+    flutterTts.setStartHandler(() {
+      setState(() {
+        print("playing");
+        ttsState = TtsState.playing;
+      });
+    });
+
+    flutterTts.setCompletionHandler(() async {
+      setState(() {
+        print("Complete");
+        ttsState = TtsState.stopped;
+      });
+
+      await MethodChannel('dev.elainedb.voice_clock/stt').invokeMethod('final', '');
+    });
+
+    flutterTts.setErrorHandler((msg) {
+      setState(() {
+        print("error: $msg");
+        ttsState = TtsState.stopped;
+      });
+    });
+  }
+
   @override
   void didUpdateWidget(DigitalClock oldWidget) {
     super.didUpdateWidget(oldWidget);
@@ -109,6 +142,7 @@ class _DigitalClockState extends State<DigitalClock> {
     widget.model.removeListener(_updateModel);
     widget.model.dispose();
     super.dispose();
+    flutterTts.stop();
   }
 
   void _updateModel() {
@@ -265,11 +299,13 @@ class _DigitalClockState extends State<DigitalClock> {
       }
 
       if (tts != "Setting to") {
-        flutterTts.setSpeechRate(0.4);
-        flutterTts.speak(tts);
+        _speak(tts);
       }
-
-      await MethodChannel('dev.elainedb.voice_clock/stt').invokeMethod('final', '');
+    } else {
+      // force final if "over" is said
+      if (result.recognizedWords.toLowerCase().contains("over")) {
+        stopListening();
+      }
     }
 
     setState(() {
@@ -296,6 +332,20 @@ class _DigitalClockState extends State<DigitalClock> {
     });
   }
 
+  Future _speak(String voiceText) async {
+    await flutterTts.setVolume(1.0);
+    await flutterTts.setSpeechRate(0.4);
+    await flutterTts.setPitch(1.0);
+
+    var result = await flutterTts.speak(voiceText);
+    if (result == 1) setState(() => ttsState = TtsState.playing);
+  }
+
+  Future _stop() async {
+    var result = await flutterTts.stop();
+    if (result == 1) setState(() => ttsState = TtsState.stopped);
+  }
+
   void _setupHotwordMethodChannel() {
     MethodChannel('dev.elainedb.voice_clock/hotword').setMethodCallHandler((MethodCall call) async {
       print(call.method + " " + call.arguments);
@@ -312,8 +362,7 @@ class _DigitalClockState extends State<DigitalClock> {
         setState(() {
           _colors = _darkTheme;
         });
-        flutterTts.setSpeechRate(0.4);
-        flutterTts.speak('Setting to dark theme from app actions.');
+        _speak('Setting to dark theme from app actions.');
       }
     });
   }
