@@ -56,13 +56,15 @@ class MainActivity: FlutterActivity() {
         process()
 
         // Deeplink / App Actions
+        // adb -s FA69V0308233 shell am start -a android.intent.action.VIEW
+        // -d "https://assistant.google.com/services/invoke/uid/0000191fc6b2bb5d?intent=actions.intent.OPEN_APP_FEATURE\&param.feature=%22History%22"
         val action: String? = intent?.action
         val data: Uri? = intent?.data
         when (action) {
             // When the action is triggered by a deep-link, Intent.Action_VIEW will be used
             Intent.ACTION_VIEW -> {
-                when (data?.path) {
-                    DeepLink.DARK -> {
+                when (intent.data.getQueryParameter("feature").toLowerCase()) {
+                    "dark" -> {
                         Handler().postDelayed({
                             configChannel.invokeMethod("dark", "")
                         }, 5000)
